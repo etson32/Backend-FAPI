@@ -1,0 +1,19 @@
+# Dar permisos para utilizar scripts en PowerShell
+
+Set-ExecutionPolicy Unrestricted
+
+# Crear entorno virtual 
+
+python -m venv .venv
+
+# Iniciar entorno virtual
+
+.\.venv\Scripts\activate
+
+# Dirigirse a la carpeta FastAPI
+
+cd .\FastAPI\
+
+# Ejecutar fastapi
+
+python main.py
