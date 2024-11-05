@@ -10,7 +10,7 @@ import uvicorn
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
-from data_initializer import initialize_default_data
+from .data_initializer import initialize_default_data
 from sqlalchemy import select, union_all, func
 
 @asynccontextmanager
