@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel, Field
 from typing import List, Annotated, Optional
-import models
+from . import models
 from database import engine, SessionLocal
 from sqlalchemy.orm import Session, sessionmaker
 import shutil, os, datetime
