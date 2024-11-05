@@ -54,10 +54,14 @@ try:
     conn.close()  # Cerrar la conexión
 
 except Exception as e:
-    print(f"Ocurrió un error al intentar crear o conectar a la base de datos: {e}")
+    print(f"Ocurrió un error al intentar crear a la base de datos: {e}")
   
 # Crear un nuevo motor para la nueva base de datos
-new_database_url = f'postgresql://{username}:{password}@{host}:{port}/{new_database_name}?client_encoding=UTF8'
+#Para pruebas locales
+#new_database_url = f'postgresql://{username}:{password}@{host}:{port}/{new_database_name}?client_encoding=UTF8'
+
+#Para deploy
+new_database_url = 'postgresql://unsaac:7H1nGw7xiHdOqOPOaBjERfV5dV1A8Tvc@dpg-csl48go8fa8c73e05d30-a/scontroltesis'
 
 # Crear el motor y la sesión
 engine = create_engine(new_database_url)
