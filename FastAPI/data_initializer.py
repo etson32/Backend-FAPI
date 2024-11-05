@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-import models
+from . import models
 from database import SessionLocal
 from sqlalchemy import text
 
