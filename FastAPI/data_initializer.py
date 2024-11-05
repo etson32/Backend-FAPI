@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from . import models
-from database import SessionLocal
+from .database import SessionLocal
 from sqlalchemy import text
 
 # Ejecutar archivo SQL
