@@ -1,10 +1,12 @@
 from sqlalchemy import create_engine, URL, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.ext.declarative import declarative_base
+from typing import Annotated
+from fastapi import Depends
 import psycopg2
 
-# Se crea una base de datos si no se tiene aun, o se quiere hacer pruebas desde cero
-# Configuración de conexión
+# Se crea una base de datos si no se tiene aun, o se quiere reiniciar para hacer pruebas desde cero
+# Base de datos local
 username = 'postgres'
 password = '123'
 host = 'localhost'
@@ -52,6 +54,13 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Crear una clase base para los modelos
 Base = declarative_base()
 
+# Dependencia para obtener la sesión
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db # Devuelve la sesión al contexto
+    finally:
+        db.close()  # Asegura que la sesión se cierre
 
-
-
+# Abrir sesion para cada endpoint
+db_dependency = Annotated[Session, Depends(get_db)] 

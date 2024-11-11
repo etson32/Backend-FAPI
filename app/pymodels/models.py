@@ -1,8 +1,7 @@
-from sqlalchemy import Column, Integer, String, Boolean, Float, ARRAY, Text, DateTime, ForeignKey, Enum
+from ..db.database import Base
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, ARRAY
 from sqlalchemy.orm import relationship
-from .database import Base
-from datetime import datetime, timezone, timedelta
-#import datetime
+from datetime import datetime
 
 class Tesis(Base):
     __tablename__ = 'tesis'
@@ -11,7 +10,7 @@ class Tesis(Base):
     titulo = Column(String, nullable=False)  # Titulo de la tesis
     resumen = Column(String, nullable=False)  # Resumen o abstract de la tesis
     especialidad = Column(String, nullable=False)  # Especialidad de la carrera
-    keywords = Column(String)  # Temas relacionados
+    keywords = Column(ARRAY(String))  # Temas relacionados
     autor1 = Column(Integer, ForeignKey('usuario.id_usuario'), nullable=False)  # Autor 1
     autor2 = Column(Integer, ForeignKey('usuario.id_usuario'), nullable=True)  # Autor 2 (opcional)
     autor3 = Column(Integer, ForeignKey('usuario.id_usuario'), nullable=True)  # Autor 3 (opcional)
@@ -21,8 +20,7 @@ class Tesis(Base):
     revisor1 = Column(Integer, ForeignKey('usuario.id_usuario'), nullable=True)  # Revisor 1 (opcional)
     revisor2 = Column(Integer, ForeignKey('usuario.id_usuario'), nullable=True)  # Revisor 2 (opcional)
     asesorado = Column(Boolean, default=False)  # Estado de asesoramiento
-    editado_en = Column(DateTime, default=datetime.now, onupdate=datetime.now)  # Última fecha de edición
-
+    editado_en = Column(DateTime, onupdate=datetime.now)  # Última fecha de edición
 
     # Relaciones
     #autor1_rel = relationship('Usuario', foreign_keys=[autor1])
@@ -43,12 +41,13 @@ class PlanTesis(Base):
     direccion_pdf = Column(String, nullable=False)  # Dirección del archivo PDF
     fecha_creacion = Column(DateTime, default=datetime.now)  # Fecha de creación del plan de tesis
     fecha_modificacion = Column(DateTime, nullable=True)  # Fecha de modificación del plan de tesis
+    
 
 class RevisarTesis(Base):
     __tablename__ = 'revisar_tesis'
 
     id_comentario = Column(Integer, primary_key=True, autoincrement=True)  # Identificador del comentario
-    id_plan_tesis = Column(Integer, ForeignKey('plan_tesis.id_plan_tesis'), nullable=False)  # Relación con la tabla Plan_Tesis
+    id_plan_tesis = Column(Integer, ForeignKey('plan_tesis.id_plan_tesis'), unique= True, nullable=False)  # Relación con la tabla Plan_Tesis
     descripcion = Column(String, nullable=False)  # Descripción breve de las observaciones
     completado = Column(Boolean, default=False)  # Indica si el comentario ha sido completado
     fecha_creacion = Column(DateTime, default=datetime.now)  # Fecha de creación del comentario
@@ -115,22 +114,21 @@ class Usuario(Base):
     __tablename__ = 'usuario'
 
     id_usuario = Column(Integer, primary_key=True, autoincrement=True)  # Identificador único del usuario
-    apellido_paterno = Column(String, nullable=False)  # Apellido paterno del usuario
-    apellido_materno = Column(String, nullable=False)  # Apellido materno del usuario
+    apellidos_familiar = Column(String, nullable=False)  # Apellido paterno del usuario
     nombres = Column(String, nullable=False)  # Nombres del usuario
-    correo_electronico = Column(String, nullable=False, unique=True)  # Correo electrónico usado para el login
-    dni = Column(String, nullable=False, unique=True)  # Documento de identidad
-    password_hash = Column(String, nullable=False)  # Contraseña cifrada para autenticación
+    email = Column(String, nullable=False, unique=True)  # Correo electrónico usado para el login
+    dni = Column(Integer, nullable=True, unique=True)  # Documento de identidad | Opcional
+    password_hash = Column(String, nullable = False, default="unsaac")  # Contraseña cifrada para autenticación
+    google_sub = Column(String, unique=True, nullable=True)
     fecha_creacion = Column(DateTime, default=datetime.now)  # Fecha en que se creó la cuenta
-    grado_academico = Column(String, nullable=False)
-    activo = Column(Boolean, default=True)  # Indica si el usuario está activo o inactivo
-    id_rol = Column(Integer, ForeignKey('rol.id_rol'), nullable=False)  # Relación con la tabla Roles
-    
+    grado_academico = Column(String, nullable=False, default="Invitado")
+    activo = Column(Boolean, default=False)  # Indica si el usuario está activo o inactivo
+    esta_registrado = Column(Boolean, default=False)  # Indica si el usuario está activo o inactivo
+    id_rol = Column(Integer, ForeignKey('rol.id_rol'), nullable=False, default=5)  # Relación con la tabla Roles
+     
     # Relación con Rol
     #rol = relationship("Rol", back_populates="Usuario")
-
-
-
+ 
 # Tabla de Permisos
 class Permiso(Base):
     __tablename__ = 'permisos'

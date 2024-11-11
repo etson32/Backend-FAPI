@@ -1,17 +1,29 @@
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
-from pydantic import BaseModel, Field
-from typing import List, Annotated, Optional
-from . import models
-from .database import engine, SessionLocal
-from sqlalchemy.orm import Session, sessionmaker
-import shutil, os, datetime
-from datetime import datetime, timezone, timedelta
-import uvicorn
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, status
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
+from app.db.data_initializer import initialize_default_data
+from app.db.database import engine, get_db, db_dependency
+from app.pymodels import models
+from app.pymodels import schemas
+from app.routers.auth import router as auth_router
+from app.routers.tesis import router as tesis_router
+from app.routers._services import user_dependency
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
+from fastapi.security.api_key import APIKeyHeader
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
-from .data_initializer import initialize_default_data
-from sqlalchemy import select, union_all, func
+from typing import AsyncGenerator, List
+from dotenv import load_dotenv
+import shutil, logging, os
+
+# Cargar las variables del archivo .env
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+origins = ["*"]
+
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator :
@@ -23,111 +35,39 @@ async def lifespan(app: FastAPI) -> AsyncGenerator :
     yield
     # Código que se ejecuta al cerrar
     print("Cerrando la aplicación...")
-  
+    
 # Crear la aplicación FastAPI con el contexto de vida
 app = FastAPI(lifespan=lifespan)
 
-# Agregar datos por defecto
-class TesisBase(BaseModel):
-    titulo: str  # Título de la tesis
-    resumen: str  # Resumen o abstract de la tesis
-    especialidad: str  # Especialidad de la carrera
-    keywords: Optional[str] = None  # Temas relacionados
-    autor1: int  # ID del primer autor
-    autor2: Optional[int] = None  # ID del segundo autor (opcional)
-    autor3: Optional[int] = None  # ID del tercer autor (opcional)
-    asesor: int  # ID del asesor
-    actividad_focus: str  # Actividad actual de la tesis
-    revisor1: Optional[int] = None  # ID del primer revisor (opcional)
-    revisor2: Optional[int] = None  # ID del segundo revisor (opcional)
-    asesorado: bool = False  # Estado de asesoramiento
-    creacion_en: Optional[datetime] = None  # Fecha de creación de tesis
-    editado_en: Optional[datetime] = None  # Fecha de última edición
+# Define API Key Header para "Authorization"
+api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
 
-class PlanTesisBase(BaseModel):
-    id_tesis: int
-    estado: str  # 'Visto', 'Observado', 'Aprobado', 'Rechazado'
-    direccion_pdf: str
-    fecha_creacion: datetime
-    fecha_modificacion: Optional[datetime] = None
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True, 
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
-class RevisarTesisBase(BaseModel):
-    id_plan_tesis: int
-    descripcion: str
-    completado: bool = False
-    fecha_creacion: datetime
-    fecha_completado: Optional[datetime] = None
-    origen_entidad: str  # 'Propuesta', 'Plan'
-
-class DocumentosBase(BaseModel):
-    id_tesis: int
-    nombre_archivo: str
-    detalle: Optional[str] = None
-    tipo: str  # 'Oficio', 'Resolucion', 'Proveido', 'Informe Turnitin'
-    create_by: int
-    create_at: datetime
-    update_at: Optional[datetime] = None
-    fase: Optional[str] = None
-    estado: str  # 'Activo', 'Inactivo', 'Rechazado'
-    direccion_url: str
-
-class RolBase(BaseModel):
-    nombre_rol: str  # Nombre del rol (Ej.: Estudiante, Asesor, Secretario)
-    descripcion: Optional[str] = None  # Descripción de las responsabilidades de ese rol
-
-class UsuarioBase(BaseModel):
-    apellido_paterno: str  # Apellido paterno del usuario
-    apellido_materno: str  # Apellido materno del usuario
-    nombres: str  # Nombres del usuario
-    correo_electronico: str  # Correo electrónico usado para el login
-    dni: str  # Documento de identidad
-    password_hash: str  # Contraseña cifrada para autenticación
-    grado_academico : str # Grado academico de usuario
-    activo: bool = True  # Indica si el usuario está activo o inactivo
-    id_rol: int  # Relación con la tabla Roles
-
-class PermisoBase(BaseModel):
-    nombre_permiso: str  # Nombre del permiso (Ej.: Crear Propuesta, Revisar Plan)
-    descripcion: Optional[str] = None  # Descripción del permiso
-
-class RolPermisoBase(BaseModel):
-    id_rol: int  # Referencia al identificador del rol
-    id_permiso: int  # Referencia al identificador del permiso
-    # fecha_asignacion: datetime  # Fecha en que se asignó el permiso al rol
-
-
-# Agregar datos por defecto
-# with Session(engine) as session1:
-#     if session1.query(models.Rol).count() == 0:
-#         roles = [
-#             models.Rol(nombre_rol='Administrador', descripcion='Rol con acceso total'),
-#             models.Rol(nombre_rol='Estudiante', descripcion='Rol para estudiantes'),
-#             models.Rol(nombre_rol='Asesor', descripcion='Rol para asesores'),
-#             models.Rol(nombre_rol='Secretario', descripcion='Rol para secretarios')
-#         ]
-#         session1.add_all(roles)
-#         session1.commit()
-#         print("Datos por defecto insertados en la tabla Roles.")
-#     else:
-#         print("Los datos por defecto ya existen en la tabla Roles.")
-
-
-# Dependencia para obtener la sesión
-async def get_db():
-    db = SessionLocal()
-    try:
-        yield db # Devuelve la sesión al contexto
-    finally:
-        db.close()  # Asegura que la sesión se cierre
-
-
+app.include_router(auth_router)
+app.include_router(tesis_router)
 
 ########################################################
-
+ 
 ########################################################
+
+# @app.get("/", status_code=status.HTTP_200_OK)
+# async def user(user: user_dependency, db: db_dependency):
+#     if user is None:
+#         raise HTTPException(status_code=401, detail="Authentication failed.")
+
+#     return {"user": user}
+
 
 @app.post("/roles/", tags=["Roles"])
-async def crear_rol(rol: RolBase, db: Session = Depends(get_db)):
+async def crear_rol(rol: schemas.RolBase, db: Session = Depends(get_db)):
     # Verificar si el rol ya existe
     existing_rol = db.query(models.Rol).filter(models.Rol.nombre_rol == rol.nombre_rol).first()
     if existing_rol:
@@ -156,7 +96,7 @@ async def crear_rol(rol: RolBase, db: Session = Depends(get_db)):
 ########################################################
 # Endpoint par agregar usuario (BASICO)
 @app.post("/usuario/", tags=["Usuarios"])
-async def crear_usuario(usuario: UsuarioBase, db: Session = Depends(get_db)):
+async def crear_usuario(usuario: schemas.UsuarioBase, db: Session = Depends(get_db)):
     db_usuario = models.Usuario(
         apellido_paterno=usuario.apellido_paterno,
         apellido_materno=usuario.apellido_materno,
@@ -183,7 +123,7 @@ async def crear_usuario(usuario: UsuarioBase, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))  # Retornar un error 500
 
 # Endpoint para obtener usuario
-@app.get("/usuarios/{usuario_id}", response_model=UsuarioBase, tags=["Usuarios"])
+@app.get("/usuarios/{usuario_id}", response_model=schemas.UsuarioBase, tags=["Usuarios"])
 async def obtener_usuario(usuario_id: int, db: Session = Depends(get_db)):
     # Buscar el usuario por ID en la base de datos
     usuario = db.query(models.Usuario).filter(models.Usuario.id_usuario == usuario_id).first()
@@ -204,7 +144,7 @@ async def obtener_usuario(usuario_id: int, db: Session = Depends(get_db)):
     })
 
 # Endpoint para obtener todos los usuarios
-@app.get("/usuarios/", response_model=List[UsuarioBase], tags=["Usuarios"])
+@app.get("/usuarios/", response_model=List[schemas.UsuarioBase], tags=["Usuarios"])
 async def obtener_usuarios(db: Session = Depends(get_db)):
     usuarios = db.query(models.Usuario).all()  # Seleccionar todos los usuarios
     if not usuarios:
@@ -213,7 +153,7 @@ async def obtener_usuarios(db: Session = Depends(get_db)):
     return usuarios  # Retorna la lista de usuarios
 
 
-@app.get("/tesistas_disponibles", response_model=List[UsuarioBase], tags=["Usuarios"])
+@app.get("/tesistas_disponibles", response_model=List[schemas.UsuarioBase], tags=["Usuarios"])
 async def obtener_tesistas(db: Session = Depends(get_db)):
 
     # Obbtener los IDs de usuarios que están en tesis
@@ -253,7 +193,7 @@ async def obtener_tesistas(db: Session = Depends(get_db)):
 
 
 # Endpoint para obtener todos los usuarios
-@app.get("/docentes", response_model=List[UsuarioBase], tags=["Usuarios"])
+@app.get("/docentes", response_model=List[schemas.UsuarioBase], tags=["Usuarios"])
 async def obtener_docentes(db: Session = Depends(get_db)):
     docente_rol_id = db.query(models.Rol.id_rol).filter(models.Rol.nombre_rol == 'Docente').scalar()
     # Realizar la consulta solo para los campos necesarios
@@ -286,7 +226,7 @@ async def obtener_docentes(db: Session = Depends(get_db)):
 
  
 @app.put("/usuarios/{usuario_id}", tags=["Usuarios"])
-async def editar_usuario(usuario_id: int, usuario: UsuarioBase, db: Session = Depends(get_db)):
+async def editar_usuario(usuario_id: int, usuario: schemas.UsuarioBase, db: Session = Depends(get_db)):
     db_usuario = db.query(models.Usuario).filter(models.Usuario.id_usuario == usuario_id).first()
     
     if db_usuario is None:
@@ -321,81 +261,79 @@ async def editar_usuario(usuario_id: int, usuario: UsuarioBase, db: Session = De
         raise HTTPException(status_code=500, detail=str(e))  # Retornar un error 500
     
 
-
-
 ########################################################
 ########       USUARIOS
 ########################################################
 
-@app.post("/propuestatesis/", tags=["PlanTesis"])
-async def crear_propuestatesis(propuesta: TesisBase, db: Session = Depends(get_db)):
-    db_propuesta = models.PropuestaTesis(
-        titulo_tentativo=propuesta.titulo_tentativo,
-        descripcion=propuesta.descripcion,
-        keywords=propuesta.keywords,
-        asesor=propuesta.asesor, 
-        estado=propuesta.estado,
-        path_tesis=propuesta.path_tesis, # Path de la tesis
-        # fecha_inscripcion=propuesta.fecha_inscripcion,  # Fecha de inscripción, por defecto la actual
-        # fecha_modificacion=propuesta.fecha_modificacion  # Fecha de modificación, por defecto la actual
-    )
-    # Validar que se esta agregando
-    try:
-        db.add(db_propuesta)
-        db.commit()
-        db.refresh(db_propuesta)
-        return {
-            'detail': 'Success',
-        }
-    except Exception as e:
-        db.rollback()  # Revertir la transacción en caso de error
-        raise HTTPException(status_code=500, detail=str(e))  # Retornar un error 500
+# @app.post("/propuestatesis/", tags=["PlanTesis"])
+# async def crear_propuestatesis(propuesta: schemas.TesisBase, db: Session = Depends(get_db)):
+#     db_propuesta = models.PropuestaTesis(
+#         titulo_tentativo=propuesta.titulo_tentativo,
+#         descripcion=propuesta.descripcion,
+#         keywords=propuesta.keywords,
+#         asesor=propuesta.asesor, 
+#         estado=propuesta.estado,
+#         path_tesis=propuesta.path_tesis, # Path de la tesis
+#         # fecha_inscripcion=propuesta.fecha_inscripcion,  # Fecha de inscripción, por defecto la actual
+#         # fecha_modificacion=propuesta.fecha_modificacion  # Fecha de modificación, por defecto la actual
+#     )
+#     # Validar que se esta agregando
+#     try:
+#         db.add(db_propuesta)
+#         db.commit()
+#         db.refresh(db_propuesta)
+#         return {
+#             'detail': 'Success',
+#         }
+#     except Exception as e:
+#         db.rollback()  # Revertir la transacción en caso de error
+#         raise HTTPException(status_code=500, detail=str(e))  # Retornar un error 500
 
 
-#SUBIR ARCHIVO .txt
-# @app.post('/files', tags=["PlanTesis"])
-# def get_file(file: bytes = File(...)):
-#     content = file.decode('utf-8')
-#     lines = content.split('\n')
-#     return {"content": lines}
+# #SUBIR ARCHIVO .txt
+# # @app.post('/files', tags=["PlanTesis"])
+# # def get_file(file: bytes = File(...)):
+# #     content = file.decode('utf-8')
+# #     lines = content.split('\n')
+# #     return {"content": lines}
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'pdf'}
+# def allowed_file(filename):
+#     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'pdf'}
 
-#Subir archivos, restringir a .PDF
-@app.post('/upload_propuesta', tags=["PlanTesis"])
-async def upload_file(uploaded_file: UploadFile = File(...)):
-    # Verifica la extensión del archivo
-    if not allowed_file(uploaded_file.filename):
-        raise HTTPException(status_code=400, detail="Extensión de archivo no válida. Solo se admite .pdf")
+# #Subir archivos, restringir a .PDF
+# @app.post('/upload_propuesta', tags=["PlanTesis"])
+# async def upload_file(uploaded_file: UploadFile = File(...)):
+#     # Verifica la extensión del archivo
+#     if not allowed_file(uploaded_file.filename):
+#         raise HTTPException(status_code=400, detail="Extensión de archivo no válida. Solo se admite .pdf")
     
-    # Renombrar el archivo
-    new_name = "01-PT-2024-2.pdf"
-    path_d = "files/"+new_name
+#     # Renombrar el archivo
+#     new_name = "01-PT-2024-2.pdf"
+#     path_d = "files/"+new_name
     
-    # Guarda el archivo directamente en el destino
-    with open(path_d, "wb") as buffer:
-        shutil.copyfileobj(uploaded_file.file, buffer)
+#     # Guarda el archivo directamente en el destino
+#     with open(path_d, "wb") as buffer:
+#         shutil.copyfileobj(uploaded_file.file, buffer)
 
-    ## GUARDAR PATH DE PLAN DE TESIS
+#     ## GUARDAR PATH DE PLAN DE TESIS
 
-    return {
-        'filename': uploaded_file.filename,
-        'content_type': uploaded_file.content_type,
-        'path': path_d,
-        'detail': 'Success'
-    }
+#     return {
+#         'filename': uploaded_file.filename,
+#         'content_type': uploaded_file.content_type,
+#         'path': path_d,
+#         'detail': 'Success'
+#     }
 
-@app.get("/propuestatesis/{propuesta_id}", tags=["PlanTesis"])
-async def get_propuesta_by_id(id_tesis: int, db: Session = Depends(get_db)):
-    propuesta = db.query(models.Tesis).filter(models.Tesis.id_tesis == id_tesis).first()
-    if propuesta is None:
-        raise HTTPException(status_code=404, detail="Propuesta de tesis no encontrada")
-    return propuesta
-
+# @app.get("/propuestatesis/{propuesta_id}", tags=["PlanTesis"])
+# async def get_propuesta_by_id(id_tesis: int, db: Session = Depends(get_db)):
+#     propuesta = db.query(models.Tesis).filter(models.Tesis.id_tesis == id_tesis).first()
+#     if propuesta is None:
+#         raise HTTPException(status_code=404, detail="Propuesta de tesis no encontrada")
+#     return propuesta
 
 # Lanzar configuracion automatica para ejecucion
 # Para pruebas locales
 
-#if __name__ == '__main__':
-#    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True) 
+if __name__ == '__main__':
+   import uvicorn
+   uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True) 

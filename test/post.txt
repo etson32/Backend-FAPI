@@ -1,0 +1,15 @@
+{
+  "titulo": "Investigación sobre IA en Educación",
+  "resumen": "Este proyecto tiene como objetivo explorar el impacto de la inteligencia artificial en la educación moderna, con un enfoque en el aprendizaje personalizado.",
+  "especialidad": "Inteligencia Artificial",
+  "keywords": [
+    "IA",
+    "Educación",
+    "Aprendizaje Personalizado"
+  ],
+  "autor2": 2,
+  "autor3": 3,
+  "asesor": 4,
+  "actividad_focus": "Desarrollo de herramientas de IA para educación",
+  "editado_en": "2024-11-08T19:56:46.782Z"
+}

@@ -10,9 +10,9 @@ python -m venv .venv
 
 .\.venv\Scripts\activate
 
-# Dirigirse a la carpeta FastAPI
+# Instalar requirements
 
-cd .\FastAPI\
+pip install -r requirements.txt
 
 # Ejecutar fastapi
 
