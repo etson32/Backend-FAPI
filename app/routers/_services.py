@@ -121,7 +121,7 @@ def get_current_user_http(db: db_dependency, credentials: HTTPAuthorizationCrede
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No es un token válido o ha expirado.",
-        ) from e
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

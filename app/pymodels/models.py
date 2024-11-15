@@ -2,6 +2,7 @@ from ..db.database import Base
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, ARRAY
 from sqlalchemy.orm import relationship
 from datetime import datetime
+from enum import Enum as PyEnum
 
 class Tesis(Base):
     __tablename__ = 'tesis'
@@ -146,3 +147,49 @@ class RolPermiso(Base):
     id_rol = Column(Integer, ForeignKey('rol.id_rol'), nullable=False)  # Referencia al identificador del rol
     id_permiso = Column(Integer, ForeignKey('permisos.id_permiso'), nullable=False)  # Referencia al identificador del permiso
     fecha_asignacion = Column(DateTime, default=datetime.now)  # Fecha en que se asignó el permiso al rol
+
+
+# ===========================================================================#
+# ===========================================================================#
+# -------------------- NOTIFICACIONES ------------------- #	
+
+# Enum de Python
+class NotificationType(PyEnum):
+    PROPUESTA_ENVIADA = "propuesta_enviada" # Asesor es notificado para aceptar propuesta de tesis
+    PROPUESTA_ACEPTADA = "propuesta_aceptada" # Asesor acepta propuesta de tesis
+    INVITACION_USUARIO = "invitacion_usuario" # Tesista agrega a autor 2 o 3 
+    CORRECCION_REQUERIDA = "correccion_requerida" # Asesor envia sugerencias de correccion tesis
+
+class NotificationEntity(Base):
+    __tablename__ = "notification_entities"
+ 
+    id = Column(Integer, primary_key=True)
+    entity = Column(String, nullable=False)  # Por ejemplo, 'tesis'
+    entity_kind = Column(String, nullable=False)  # Tipo de notificación (e.g., 'inclusión', 'corrección')
+    type = Column(String, nullable=False)  # Por ejemplo, 'tesis'
+    template = Column(String, nullable=False) 
+    is_deleted = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=datetime.now())
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True)
+    message = Column(String, nullable=False)
+    notification_entity_id = Column(Integer, ForeignKey("notification_entities.id"), nullable=False)
+    actor_type = Column(String, nullable=True)  # Por ejemplo, 'Asesor' o 'Estudiante'
+    actor_id = Column(Integer, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=datetime.now())
+
+class NotificationReceiver(Base):
+    __tablename__ = "notification_receivers"
+
+    id = Column(Integer, primary_key=True)
+    notification_id = Column(Integer, ForeignKey("notifications.id"), nullable=False)
+    notification = relationship("Notification")
+    user_id = Column(Integer, ForeignKey("usuario.id_usuario"), nullable=False)
+    read_status = Column(Boolean, default=False)
+    date_read = Column(DateTime, nullable=True)
+    is_deleted = Column(Boolean, default=False)

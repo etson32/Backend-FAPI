@@ -5,8 +5,8 @@ from datetime import timedelta
 from typing import Annotated
 from starlette import status
 from fastapi.security import OAuth2PasswordRequestForm
-from ..pymodels.models import Usuario, Tesis, Rol
-from ..pymodels.schemas import TesisBase, TesisAgregarBase, GoogleUserBase, TokenBase, RefreshTokenRequestBase, UpdateUserRequestBase
+from ..pymodels.models import Usuario, Tesis, Rol, NotificationEntity, Notification, NotificationReceiver
+from ..pymodels.schemas import TesisBase, TesisAgregarBase
 from ._services import get_current_user_http
 from ..db.database import db_dependency
 from ._services import oauth
@@ -135,4 +135,91 @@ async def create_tesis(
     db.add(create_tesis_model)
     db.commit()
 
-    return {"message": "Tesis creado correctamente"}
+    #return {"message": "Tesis creado correctamente"}
+    db.refresh(create_tesis_model)
+
+    if len(usuarios_ids) > 1:
+        # Crear notificaciones para los autores y el asesor
+        for user_id in usuarios_ids[1:]:
+
+            ######### NOTIFIACION PARA EL QUE INGRESA LA TESIS (INVITACION A OTROS AUTORES) ########
+            # Recuperar la entidad de notificación para invitar a los autores
+            inclusion_entity = db.query(NotificationEntity).filter_by(
+                entity="propuesta_tesis",
+                entity_kind="inclusión",
+                type="tesista_invita"
+            ).first()
+            print(obtener_nombres_usuario(db,user_id))
+            # Crear notificación para el que esta invitando
+            new_notification = Notification(
+                message=inclusion_entity.template.format(usuario_nombres=obtener_nombres_usuario(db,user_id)),
+                notification_entity_id=inclusion_entity.id,
+                actor_type="Tesista",
+                actor_id=user_id
+            )
+            db.add(new_notification)
+            db.commit()
+            db.refresh(new_notification)
+
+            # Crear receptor de notificación para cada autor
+            notification_receiver = NotificationReceiver(
+                notification_id=new_notification.id,
+                user_id=user_id
+            )
+            db.add(notification_receiver)
+            db.commit()
+
+            ######### NOTIFICAR A AUTORES INVITADOS ########
+
+            # Recuperar la entidad de notificación para invitar a los autores
+            inclusion_entity = db.query(NotificationEntity).filter_by(
+                entity="propuesta_tesis",
+                entity_kind="inclusión",
+                type="tesista_invitado"
+            ).first()
+
+            # Crear notificación para cada autor
+            new_notification = Notification(
+                message=inclusion_entity.template.format(usuario_nombres=obtener_nombres_usuario(db,user_id), tesis_titulo=tesis.titulo),
+                notification_entity_id=inclusion_entity.id,
+                actor_type="Tesista",
+                actor_id=user_id
+            )
+            db.add(new_notification)
+            db.commit()
+            db.refresh(new_notification)
+
+            # Crear receptor de notificación para cada autor
+            notification_receiver = NotificationReceiver(
+                notification_id=new_notification.id,
+                user_id=user_id
+            )
+            db.add(notification_receiver)
+            db.commit()
+
+    # Crear notificación para el asesor al enviar la propuesta
+    propuesta_entity = db.query(NotificationEntity).filter_by(
+        entity="propuesta_tesis",
+        entity_kind="propuesta",
+        type="propuesta_enviada" 
+    ).first()
+
+    asesor_notification = Notification(
+        message=propuesta_entity.template.format(usuario=current_user, tesis=tesis),
+        notification_entity_id=propuesta_entity.id,
+        actor_type="Docente",
+        actor_id=tesis.asesor
+    )
+    db.add(asesor_notification)
+    db.commit()
+    db.refresh(asesor_notification)
+
+    # Crear receptor de notificación para el asesor
+    asesor_receiver = NotificationReceiver(
+        notification_id=asesor_notification.id,
+        user_id=tesis.asesor
+    )
+    db.add(asesor_receiver) 
+    db.commit()
+
+    return {"message": "Tesis creada correctamente y notificaciones enviadas"}

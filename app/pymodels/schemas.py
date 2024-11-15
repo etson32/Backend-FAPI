@@ -41,6 +41,7 @@ class TesisAgregarBase(BaseModel):
         def validate(cls, values):
             return cls.set_default_editado_en(values)
 
+
 class PlanTesisBase(BaseModel):
     id_tesis: int
     estado: str  # 'Visto', 'Observado', 'Aprobado', 'Rechazado'

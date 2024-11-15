@@ -54,8 +54,8 @@ async def auth_google(request: Request, db: db_dependency):
         print("Creando usuario") 
         user = create_user_from_google_info(google_user, db)
 
-    access_token = create_access_token(user.email, user.id_usuario, timedelta(days=7))
-    refresh_token = create_refresh_token(user.email, user.id_usuario, timedelta(days=14))
+    access_token = create_access_token(user.email, user.id_usuario, timedelta(minutes=1))
+    refresh_token = create_refresh_token(user.email, user.id_usuario, timedelta(minutes=1))
 
     response = JSONResponse(content={#"message": "tokens en cookies",
                                      "access_token": access_token,
@@ -132,7 +132,7 @@ async def get_user(db: db_dependency, user: user_dependency_token):
 
 
 @router.post("/token", response_model=TokenBase, status_code=status.HTTP_200_OK)
-async def login_for_access_token(db: db_dependency, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+async def login_email_password(db: db_dependency, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     user = authenticate_user(form_data.username, form_data.password, db)
 
     if not user:

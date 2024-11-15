@@ -26,34 +26,21 @@ def execute_sql_file(session: Session, file_path: str):
 # Inicializar datos por defecto
 async def initialize_default_data():
     with SessionLocal() as session:
-        insert_default_roles(session)
-        insert_default_users(session)
-        insert_default_tesis(session)
+        # Uso de la función general para cada tabla
+        insert_default_data(session, models.Rol, 'insert_default_roles.sql', 'rol')
+        insert_default_data(session, models.Usuario, 'insert_default_users.sql', 'usuario')
+        insert_default_data(session, models.Tesis, 'insert_default_tesis.sql', 'tesis')
+        insert_default_data(session, models.NotificationEntity, 'insert_default_notifications_template.sql', 'notification_entities')
         session.commit()
 
-def insert_default_roles(session: Session):
-    if session.query(models.Rol).count() == 0:
-        execute_sql_file(session, file_path='insert_default_roles.sql')
-        print("Datos por defecto insertados en la tabla 'rol'.")
-    else:
-        print("Los datos por defecto ya existen en la tabla 'rol'.")
- 
-def insert_default_users(session: Session):
-    if session.query(models.Usuario).count() == 0:
-        execute_sql_file(session, file_path='insert_default_users.sql')
-        print("Datos por defecto insertados en la tabla 'usuario'.")
-    else:
-        print("Los datos por defecto ya existen en la tabla 'usuario'.")
 
-def insert_default_tesis(session: Session):
-    if session.query(models.Tesis).count() == 0:
-        execute_sql_file(session, file_path='insert_default_tesis.sql')
-        print("Datos por defecto insertados en la tabla 'tesis'.")
+def insert_default_data(session: Session, model, file_path: str, table_name: str):
+    if session.query(model).count() == 0:
+        execute_sql_file(session, file_path=file_path)
+        print(f"Datos por defecto insertados en la tabla '{table_name}'.")
     else:
-        print("Los datos por defecto ya existen en la tabla 'tesis'.")
-  
+        print(f"Los datos por defecto ya existen en la tabla '{table_name}'.")
 
- 
 
 # def execute_sql_file(session, file_path):
 #     # UTF para procesar informacion con tildes y caracteres en español
