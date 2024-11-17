@@ -1,11 +1,39 @@
 from ..db.database import Base
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, ARRAY
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, ARRAY, Date
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from enum import Enum as PyEnum
 
 class Tesis(Base):
     __tablename__ = 'tesis'
+
+    id_tesis = Column(Integer, primary_key=True, autoincrement=True)  # Identificador de toda la tesis
+    titulo = Column(String, nullable=False)  # Titulo de la tesis
+    resumen = Column(String, nullable=False)  # Resumen o abstract de la tesis
+    especialidad = Column(String, nullable=False)  # Especialidad de la carrera
+    keywords = Column(ARRAY(String))  # Temas relacionados
+    #autor1 = Column(Integer, ForeignKey('usuario.id_usuario'), nullable=False)  # Autor 1
+    #autor2 = Column(Integer, ForeignKey('usuario.id_usuario'), nullable=True)  # Autor 2 (opcional)
+    #autor3 = Column(Integer, ForeignKey('usuario.id_usuario'), nullable=True)  # Autor 3 (opcional)
+    #asesor = Column(Integer, ForeignKey('usuario.id_usuario'), nullable=False)  # Asesor docente
+    creacion_en = Column(DateTime, default=datetime.now)  # Fecha de creación de tesis
+    actividad_focus = Column(String, nullable=False)  # Actividad actual
+    #revisor1 = Column(Integer, ForeignKey('usuario.id_usuario'), nullable=True)  # Revisor 1 (opcional)
+    #revisor2 = Column(Integer, ForeignKey('usuario.id_usuario'), nullable=True)  # Revisor 2 (opcional)
+    asesorado = Column(Boolean, default=False)  # Estado de asesoramiento
+    editado_en = Column(DateTime, onupdate=datetime.now)  # Última fecha de edición
+
+    # Relaciones
+    #autor1_rel = relationship('Usuario', foreign_keys=[autor1])
+    #autor2_rel = relationship('Usuario', foreign_keys=[autor2])
+    #autor3_rel = relationship('Usuario', foreign_keys=[autor3])
+    #asesor_rel = relationship('Usuario', foreign_keys=[asesor])
+    #revisor1_rel = relationship('Usuario', foreign_keys=[revisor1])
+    #revisor2_rel = relationship('Usuario', foreign_keys=[revisor2])
+    #documentos = relationship('Documentos', back_populates='tesis')  # Relación con Documentos
+
+class IntegrantesTesis(Base):
+    __tablename__ = 'integrantes_tesis'
 
     id_tesis = Column(Integer, primary_key=True, autoincrement=True)  # Identificador de toda la tesis
     titulo = Column(String, nullable=False)  # Titulo de la tesis
@@ -22,15 +50,6 @@ class Tesis(Base):
     revisor2 = Column(Integer, ForeignKey('usuario.id_usuario'), nullable=True)  # Revisor 2 (opcional)
     asesorado = Column(Boolean, default=False)  # Estado de asesoramiento
     editado_en = Column(DateTime, onupdate=datetime.now)  # Última fecha de edición
-
-    # Relaciones
-    #autor1_rel = relationship('Usuario', foreign_keys=[autor1])
-    #autor2_rel = relationship('Usuario', foreign_keys=[autor2])
-    #autor3_rel = relationship('Usuario', foreign_keys=[autor3])
-    #asesor_rel = relationship('Usuario', foreign_keys=[asesor])
-    #revisor1_rel = relationship('Usuario', foreign_keys=[revisor1])
-    #revisor2_rel = relationship('Usuario', foreign_keys=[revisor2])
-    #documentos = relationship('Documentos', back_populates='tesis')  # Relación con Documentos
 
 
 class PlanTesis(Base):
@@ -123,13 +142,17 @@ class Usuario(Base):
     google_sub = Column(String, unique=True, nullable=True)
     fecha_creacion = Column(DateTime, default=datetime.now)  # Fecha en que se creó la cuenta
     grado_academico = Column(String, nullable=False, default="Invitado")
+    grado_academico = Column(String, nullable=False, default="Invitado")
+    ###NUEVA COLUMNA
+    foto_perfil = Column(String, nullable=True)  # Foto de perfil del estudiante.
     activo = Column(Boolean, default=False)  # Indica si el usuario está activo o inactivo
     esta_registrado = Column(Boolean, default=False)  # Indica si el usuario está activo o inactivo
-    id_rol = Column(Integer, ForeignKey('rol.id_rol'), nullable=False, default=5)  # Relación con la tabla Roles
+    id_rol = Column(Integer, ForeignKey('rol.id_rol'), nullable=False, default=5)  # Relación con la tabla Roles invitado por defecto
      
     # Relación con Rol
     #rol = relationship("Rol", back_populates="Usuario")
- 
+
+
 # Tabla de Permisos
 class Permiso(Base):
     __tablename__ = 'permisos'

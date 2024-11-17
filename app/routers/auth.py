@@ -37,10 +37,9 @@ async def auth_google(request: Request, db: db_dependency):
         user_response: OAuth2Token = await oauth.google.authorize_access_token(request)
     except OAuthError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
+    
 
     user_info = user_response.get("userinfo")
-
-    #print(user_info)
 
     google_user = GoogleUserBase(**user_info)
 

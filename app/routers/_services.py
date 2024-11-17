@@ -148,6 +148,7 @@ def create_user_from_google_info(google_user: GoogleUserBase, db: Session):
     nombre = google_user.given_name
     google_sub = google_user.sub
     email = google_user.email
+    picture = google_user.picture
 
     existing_user = db.query(Usuario).filter(Usuario.email == email).first()
 
@@ -163,6 +164,7 @@ def create_user_from_google_info(google_user: GoogleUserBase, db: Session):
             nombres = nombre,
             email=email,
             google_sub=google_sub,
+            foto_perfil= picture, 
             activo=False,
             esta_registrado=False
         )
