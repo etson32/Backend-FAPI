@@ -25,11 +25,11 @@ GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = "http://localhost:8000/auth/callback/google"
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 
-
-@router.get("/google")
+ 
+@router.get("/google")  
 async def login_google(request: Request):
     return await oauth.google.authorize_redirect(request, GOOGLE_REDIRECT_URI)
-
+  
 
 @router.get("/callback/google")
 async def auth_google(request: Request, db: db_dependency):
@@ -53,8 +53,8 @@ async def auth_google(request: Request, db: db_dependency):
         print("Creando usuario") 
         user = create_user_from_google_info(google_user, db)
 
-    access_token = create_access_token(user.email, user.id_usuario, timedelta(minutes=1))
-    refresh_token = create_refresh_token(user.email, user.id_usuario, timedelta(minutes=1))
+    access_token = create_access_token(user.email, user.id_usuario, timedelta(minutes=15))
+    refresh_token = create_refresh_token(user.email, user.id_usuario, timedelta(minutes=15))
 
     response = JSONResponse(content={#"message": "tokens en cookies",
                                      "access_token": access_token,
@@ -67,21 +67,38 @@ async def auth_google(request: Request, db: db_dependency):
 
 
 # Endpoint para verificar usuario
-@router.put("/verify-sign-up", status_code=status.HTTP_303_SEE_OTHER)
-async def complete_registration(
-    current_user: Usuario = Depends(get_current_user_http)  # Dependencia de la función get_current_user_http
+@router.get("/verify-sign-up", status_code=status.HTTP_303_SEE_OTHER)
+async def verify_user_status(
+    current_user: Usuario = Depends(get_current_user_http)  # Dependencia de autenticación
 ):
-    # Verificar si el usuario necesita completar su registro
+    """
+    Verifica el estado de registro y actividad del usuario.
+    Redirige al formulario de registro si el usuario no ha completado su registro.
+    Bloquea el acceso si el usuario está inactivo.
+    """
+
+    # Verificar si el usuario está registrado
     if not current_user.esta_registrado:
-        return RedirectResponse(f"{FRONTEND_URL}complete-registration", status_code=status.HTTP_303_SEE_OTHER)
-    # Verificar si el usuario está inactivo
+        return {"status: El usuario no esta registrado, redireccionar a completar registro"}
+        # return RedirectResponse(
+        #     url=f"{FRONTEND_URL}complete-registration", 
+        #     status_code=status.HTTP_303_SEE_OTHER
+        # )
+
+    # Verificar si el usuario está activo
     if not current_user.activo:
-            raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="El usuario está inactivo y no tiene permiso para acceder."
-    )
+        return {"status: El usuario está inactivo. Por favor, contacte con el administrador."}
+        # raise HTTPException(
+        #     status_code=status.HTTP_403_FORBIDDEN,
+        #     detail="El usuario está inactivo. Por favor, contacte con el administrador."
+        # )
+
     # Redireccionar al frontend si todo está correcto
-    return RedirectResponse(FRONTEND_URL, status_code=status.HTTP_303_SEE_OTHER)
+    return {"status: El usuario esta registrado y activo."}
+    # return RedirectResponse(
+    #     url=FRONTEND_URL, 
+    #     status_code=status.HTTP_303_SEE_OTHER
+    # )
 
 # Endpoint para actualizar la información del usuario
 @router.put("/complete-registration", status_code=status.HTTP_200_OK)
@@ -98,7 +115,7 @@ async def complete_registration(
     current_user.password_hash = bcrypt_context.hash(update_user_request.password)
     current_user.dni = update_user_request.dni
     current_user.grado_academico = update_user_request.grado_academico
-    current_user.id_rol = update_user_request.id_rol
+    current_user.id_tipo = update_user_request.id_tipo
 
     # Marcar al usuario como activo
     current_user.activo = True
@@ -112,17 +129,17 @@ async def complete_registration(
     return {"message": "Datos de Usuario registrado correctamente"}
 
 
-@router.post("/create-user", status_code=status.HTTP_201_CREATED)
-async def create_user(db: db_dependency, create_user_request: CreateUserRequestBase):
-    create_user_model = Usuario(
-        #username=create_user_request.username,
-        password_hash=bcrypt_context.hash(create_user_request.password)
-    )
+# @router.post("/create-user", status_code=status.HTTP_201_CREATED)
+# async def create_user(db: db_dependency, create_user_request: CreateUserRequestBase):
+#     create_user_model = Usuario(
+#         #username=create_user_request.username,
+#         password_hash=bcrypt_context.hash(create_user_request.password)
+#     )
 
-    db.add(create_user_model)
-    db.commit()
+#     db.add(create_user_model)
+#     db.commit()
 
-    return create_user_request
+#     return create_user_request
 
 
 @router.get("/get-user", status_code=status.HTTP_201_CREATED)

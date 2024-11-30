@@ -28,6 +28,7 @@ async def initialize_default_data():
     with SessionLocal() as session:
         # Uso de la función general para cada tabla
         insert_default_data(session, models.Rol, 'insert_default_roles.sql', 'rol')
+        insert_default_data(session, models.Tipo, 'insert_default_tipo.sql', 'tipo')
         insert_default_data(session, models.Usuario, 'insert_default_users.sql', 'usuario')
         insert_default_data(session, models.Tesis, 'insert_default_tesis.sql', 'tesis')
         insert_default_data(session, models.NotificationEntity, 'insert_default_notifications_template.sql', 'notification_entities')
@@ -41,7 +42,7 @@ def insert_default_data(session: Session, model, file_path: str, table_name: str
     else:
         print(f"Los datos por defecto ya existen en la tabla '{table_name}'.")
 
-
+ 
 # def execute_sql_file(session, file_path):
 #     # UTF para procesar informacion con tildes y caracteres en español
 #     with open(file_path, 'r', encoding='utf-8') as file:

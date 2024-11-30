@@ -7,6 +7,7 @@ from app.pymodels import models
 from app.pymodels import schemas
 from app.routers.auth import router as auth_router
 from app.routers.tesis import router as tesis_router
+from app.routers.notification import router as notification_router
 from app.routers._services import user_dependency
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -53,6 +54,7 @@ app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
 app.include_router(auth_router)
 app.include_router(tesis_router)
+app.include_router(notification_router)
 
 ########################################################
  
@@ -153,43 +155,6 @@ async def obtener_usuarios(db: Session = Depends(get_db)):
     return usuarios  # Retorna la lista de usuarios
 
 
-@app.get("/tesistas_disponibles", response_model=List[schemas.UsuarioBase], tags=["Usuarios"])
-async def obtener_tesistas(db: Session = Depends(get_db)):
-
-    # Obbtener los IDs de usuarios que están en tesis
-    subquery_tesis = db.query(
-        models.Tesis.autor1.label("id_usuario")
-    ).filter(models.Tesis.autor1.isnot(None))  # Filtrar NULL
-    subquery_tesis = subquery_tesis.union_all(
-        db.query(models.Tesis.autor2.label("id_usuario")).filter(models.Tesis.autor2.isnot(None)),  # Filtrar NULL
-        db.query(models.Tesis.autor3.label("id_usuario")).filter(models.Tesis.autor3.isnot(None))  # Filtrar NULL
-    ).distinct().subquery()  # Aseguramos que los IDs sean únicos
-
-    # Obtener el ID del rol de Tesista
-    tesista_rol_id = db.query(models.Rol.id_rol).filter(models.Rol.nombre_rol == 'Tesista').scalar()
-
-    # Consulta principal para obtener los estudiantes que no estan en alguna tesis
-    tesistas_disponibles = db.query(models.Usuario).filter(
-        models.Usuario.id_rol == tesista_rol_id,
-        models.Usuario.id_usuario.notin_(subquery_tesis)  # Filtramos los que están en la subconsulta
-    ).all()
-
-    if not tesistas_disponibles:
-        raise HTTPException(status_code=404, detail="No se encontraron tesistas disponibles")
-
-    # Convertir el resultado en una lista de diccionarios
-    response = [
-        {
-            "id_usuario": tesista.id_usuario,
-            "apellido_paterno": tesista.apellido_paterno,
-            "apellido_materno": tesista.apellido_materno,
-            "nombres": tesista.nombres,
-            "grado_academico": tesista.grado_academico,
-        }
-        for tesista in tesistas_disponibles
-    ]
-
-    return JSONResponse(content=response)  # Devolver la respuesta en formato JSON
 
 
 # Endpoint para obtener todos los usuarios

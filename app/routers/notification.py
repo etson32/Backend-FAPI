@@ -15,8 +15,8 @@ from fastapi.responses import RedirectResponse, JSONResponse
 import os
 
 router = APIRouter(
-    prefix='/tesis',
-    tags=['tesis']
+    prefix='/notification',
+    tags=['notification']
 )
 
 def obtener_nombres_usuario(db, usuario_id):

@@ -16,12 +16,12 @@ class TesisBase(BaseModel):
     editado_en: Optional[datetime] = None  # Fecha de última edición
 
   # Agregar datos por defecto
-class TesisAgregarBase(BaseModel):
+class TesisAgregarBase(BaseModel): 
     titulo: str  # Título de la tesis
     resumen: str  # Resumen o abstract de la tesis
-    especialidad: str  # Especialidad de la carrera
+    especialidad: str  # Especialidad de la carrera 
     keywords: Optional[List[str]] = None   # Temas relacionados
-    autor2: Optional[int] = None  # ID del segundo autor (opcional)
+    autor2: Optional[int] = None  # ID del segundo autor (opcional)  
     autor3: Optional[int] = None  # ID del tercer autor (opcional) 
     asesor: int  # ID del asesor
     actividad_focus: str  # Actividad actual de la tesis 
@@ -41,7 +41,6 @@ class TesisAgregarBase(BaseModel):
         def validate(cls, values):
             return cls.set_default_editado_en(values)
 
-
 class PlanTesisBase(BaseModel):
     id_tesis: int
     estado: str  # 'Visto', 'Observado', 'Aprobado', 'Rechazado'
@@ -52,7 +51,7 @@ class PlanTesisBase(BaseModel):
 class RevisarTesisBase(BaseModel):
     id_plan_tesis: int
     descripcion: str
-    completado: bool = False
+    completado: bool = False 
     fecha_creacion: datetime
     fecha_completado: Optional[datetime] = None
     origen_entidad: str  # 'Propuesta', 'Plan'
@@ -77,13 +76,26 @@ class UsuarioBase(BaseModel):
     apellidos_familiar: str  # Apellido paterno del usuario
     nombres: str  # Nombres del usuario
     correo_electronico: str  # Correo electrónico usado para el login
-    dni: str  # Documento de identidad
+    dni: int  # Documento de identidad
     password_hash: str  # Contraseña cifrada para autenticación
     google_sub: str # Acceso de google
     grado_academico : str # Grado academico de usuario
     activo: bool = False  # Indica si el usuario está activo o inactivo
     esta_registrado: bool = False
     id_rol: int  # Relación con la tabla Roles
+
+
+class Usuario_FrontBase(BaseModel):
+    id: str
+    dni: str
+    nombres: str
+    apellidos: str
+    email: str
+    tipo: str #Tipo // investigador, docente, secretario
+    grado: str #// estudiante, bachiler, licenciado, ingeniero, abogado, magister, doctor, etc. (SEGUN NIVEL DE ESTUDIO)
+    
+    class Config:
+        from_attributes = True  # En lugar de 'orm_mode = True'
 
 class PermisoBase(BaseModel):
     nombre_permiso: str  # Nombre del permiso (Ej.: Crear Propuesta, Revisar Plan)
@@ -151,8 +163,8 @@ class RefreshTokenRequestBase(BaseModel):
 # Definición del modelo de datos para la actualización de datos del usuario
 class UpdateUserRequestBase(BaseModel):
     password: constr(min_length=8)  # Contraseña con una longitud mínima de 8 caracteres
-    dni: int  # DNI 
+    dni: str  # DNI 
     grado_academico: str  # Grado académico 
-    id_rol: int  # Rol
+    id_tipo: int  # Rol
 
 
