@@ -223,6 +223,7 @@ async def create_tesis(
     db.add(create_tesis_model)
     db.flush() # Solo hacemos flush para obtener el ID de la tesis
 
+    print(autores_ids)
     for usuario_id in autores_ids:
         if usuario_id is not None:
             integrante_tesis = IntegrantesTesis(
@@ -234,7 +235,7 @@ async def create_tesis(
     integrante_tesis = IntegrantesTesis(
         id_usuario=tesis.asesor,
         id_tesis=create_tesis_model.id_tesis,  # Usamos el ID de la tesis recién creada
-        id_rol=2  # El rol de asesor
+        id_rol=2  # El rol de asesor 
     )
     db.add(integrante_tesis)
     db.commit()
@@ -242,38 +243,39 @@ async def create_tesis(
 
     # AÑADIR NOTIFICACIONES
     for user_id in autores_ids:
+        
+        if user_id != current_user.id_usuario:
+            ######### NOTIFIACION PARA EL QUE INGRESA LA TESIS (INVITACION A OTROS AUTORES) ########
+            # Recuperar la entidad de notificación para invitar a los autores
+            inclusion_entity = db.query(NotificationEntity).filter_by(
+                entity="tesis",
+                entity_kind="inclusión",
+                type="tesista_invita"
+            ).first()
+            # Crear notificación para el que esta invitando
+            new_notification = Notification(
+                message=inclusion_entity.template.format(usuario_nombres=obtener_nombres_usuario(db,user_id)),
+                notification_entity_id=inclusion_entity.id,
+                actor_type="Investigador",
+                actor_id=user_id
+            )
+            db.add(new_notification)
+            db.commit()
+            db.refresh(new_notification)
 
-        ######### NOTIFIACION PARA EL QUE INGRESA LA TESIS (INVITACION A OTROS AUTORES) ########
-        # Recuperar la entidad de notificación para invitar a los autores
-        inclusion_entity = db.query(NotificationEntity).filter_by(
-            entity="propuesta_tesis",
-            entity_kind="inclusión",
-            type="tesista_invita"
-        ).first()
-        # Crear notificación para el que esta invitando
-        new_notification = Notification(
-            message=inclusion_entity.template.format(usuario_nombres=obtener_nombres_usuario(db,user_id)),
-            notification_entity_id=inclusion_entity.id,
-            actor_type="Investigador",
-            actor_id=user_id
-        )
-        db.add(new_notification)
-        db.commit()
-        db.refresh(new_notification)
-
-        # Crear receptor de notificación para cada autor
-        notification_receiver = NotificationReceiver(
-            notification_id=new_notification.id,
-            user_id=user_id
-        )
-        db.add(notification_receiver)
-        db.commit()
+            # Crear receptor de notificación para cada autor
+            notification_receiver = NotificationReceiver(
+                notification_id=new_notification.id,
+                user_id=user_id
+            )
+            db.add(notification_receiver)
+            db.commit()
 
         ######### NOTIFICAR A AUTORES INVITADOS ########
 
         # Recuperar la entidad de notificación para invitar a los autores
         inclusion_entity = db.query(NotificationEntity).filter_by(
-            entity="propuesta_tesis",
+            entity="tesis",
             entity_kind="inclusión",
             type="tesista_invitado"
         ).first()
@@ -299,7 +301,7 @@ async def create_tesis(
 
     # Crear notificación para el asesor al enviar la propuesta
     propuesta_entity = db.query(NotificationEntity).filter_by(
-        entity="propuesta_tesis",
+        entity="tesis",
         entity_kind="propuesta",
         type="propuesta_enviada" 
     ).first()

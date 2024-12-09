@@ -241,25 +241,28 @@ async def create_tesis(
 
 
     # AÑADIR NOTIFICACIONES
+    if len(autores_ids) > 1:  
+        autores_ids 
     for user_id in autores_ids:
 
         ######### NOTIFIACION PARA EL QUE INGRESA LA TESIS (INVITACION A OTROS AUTORES) ########
         # Recuperar la entidad de notificación para invitar a los autores
-        inclusion_entity = db.query(NotificationEntity).filter_by(
-            entity="propuesta_tesis",
-            entity_kind="inclusión",
-            type="tesista_invita"
-        ).first()
-        # Crear notificación para el que esta invitando
-        new_notification = Notification(
-            message=inclusion_entity.template.format(usuario_nombres=obtener_nombres_usuario(db,user_id)),
-            notification_entity_id=inclusion_entity.id,
-            actor_type="Investigador",
-            actor_id=user_id
-        )
-        db.add(new_notification)
-        db.commit()
-        db.refresh(new_notification)
+        if user_id != current_user.id_usuario:
+            inclusion_entity = db.query(NotificationEntity).filter_by(
+                entity="propuesta_tesis",
+                entity_kind="inclusión",
+                type="tesista_invita"
+            ).first()
+            # Crear notificación para el que esta invitando
+            new_notification = Notification(
+                message=inclusion_entity.template.format(usuario_nombres=obtener_nombres_usuario(db,user_id)),
+                notification_entity_id=inclusion_entity.id,
+                actor_type="Investigador",
+                actor_id=user_id
+            )
+            db.add(new_notification)
+            db.commit()
+            db.refresh(new_notification)
 
         # Crear receptor de notificación para cada autor
         notification_receiver = NotificationReceiver(
@@ -276,7 +279,7 @@ async def create_tesis(
             entity="propuesta_tesis",
             entity_kind="inclusión",
             type="tesista_invitado"
-        ).first()
+        ).first() 
 
         # Crear notificación para cada autor
         new_notification = Notification(
